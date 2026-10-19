@@ -109,6 +109,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<ISkillService, SkillService>();
 
 var app = builder.Build();
 

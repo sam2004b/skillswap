@@ -1,6 +1,6 @@
-
 using Backend.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Data;
 
@@ -8,8 +8,10 @@ public class ApplicationDbContext
     : IdentityDbContext<ApplicationUser>
 {
     public ApplicationDbContext(
-        Microsoft.EntityFrameworkCore.DbContextOptions<ApplicationDbContext> options)
+        DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
+
+    public DbSet<Skill> Skills => Set<Skill>();
 }
