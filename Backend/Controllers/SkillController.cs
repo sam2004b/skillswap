@@ -86,7 +86,6 @@ public class SkillsController : ControllerBase
 
         return Ok(skill);
     }
-
     
 [Authorize]
 [HttpDelete("{id:int}")]
