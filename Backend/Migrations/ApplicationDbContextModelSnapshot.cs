@@ -135,6 +135,58 @@ namespace Backend.Migrations
                     b.ToTable("Availabilities");
                 });
 
+            modelBuilder.Entity("Backend.Models.Booking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BookingType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LearnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SkillId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TeacherId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SkillId");
+
+                    b.HasIndex("LearnerId", "StartAtUtc", "EndAtUtc");
+
+                    b.HasIndex("TeacherId", "StartAtUtc", "EndAtUtc");
+
+                    b.ToTable("Bookings");
+                });
+
             modelBuilder.Entity("Backend.Models.Skill", b =>
                 {
                     b.Property<int>("Id")
@@ -327,6 +379,33 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Backend.Models.Booking", b =>
+                {
+                    b.HasOne("Backend.Models.ApplicationUser", "Learner")
+                        .WithMany()
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Skill", "Skill")
+                        .WithMany()
+                        .HasForeignKey("SkillId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.ApplicationUser", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Learner");
+
+                    b.Navigation("Skill");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("Backend.Models.Skill", b =>
