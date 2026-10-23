@@ -18,6 +18,7 @@ public class ApplicationDbContext
     public DbSet<Availability> Availabilities => Set<Availability>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<Message> Messages => Set<Message>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -84,5 +85,36 @@ public class ApplicationDbContext
         builder.Entity<Review>()
             .HasIndex(r => r.BookingId)
             .IsUnique();
+
+        // Message sender relationship
+        builder.Entity<Message>()
+            .HasOne(m => m.Sender)
+            .WithMany()
+            .HasForeignKey(m => m.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Message receiver relationship
+        builder.Entity<Message>()
+            .HasOne(m => m.Receiver)
+            .WithMany()
+            .HasForeignKey(m => m.ReceiverId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Indexes for conversation history
+        builder.Entity<Message>()
+            .HasIndex(m => new
+            {
+                m.SenderId,
+                m.ReceiverId,
+                m.SentAtUtc
+            });
+
+        builder.Entity<Message>()
+            .HasIndex(m => new
+            {
+                m.ReceiverId,
+                m.SenderId,
+                m.SentAtUtc
+            });
     }
 }
