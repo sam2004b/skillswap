@@ -1,7 +1,9 @@
+
 using Backend.Data;
 using Backend.DTOs;
 using Backend.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Backend.Services;
 
 public class SkillService : ISkillService
@@ -45,21 +47,25 @@ public class SkillService : ISkillService
             .AsNoTracking()
             .Where(s => s.IsActive);
 
+        // Case-insensitive search across skill name and description.
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
+            var pattern = $"%{term}%";
 
             query = query.Where(s =>
-                s.Name.Contains(term) ||
-                s.Description.Contains(term));
+                EF.Functions.ILike(s.Name, pattern) ||
+                (s.Description != null &&
+                 EF.Functions.ILike(s.Description, pattern)));
         }
 
+        // Case-insensitive category matching.
         if (!string.IsNullOrWhiteSpace(category))
         {
             var selectedCategory = category.Trim();
 
             query = query.Where(s =>
-                s.Category.ToLower() == selectedCategory.ToLower());
+                EF.Functions.ILike(s.Category, selectedCategory));
         }
 
         return await query
@@ -137,11 +143,12 @@ public class SkillService : ISkillService
         if (skill is null)
             return false;
 
-        // Soft delete: preserve the record for future bookings/history.
+        // Soft delete: preserve the record for history.
         skill.IsActive = false;
         skill.UpdatedAtUtc = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
         return true;
     }
 }

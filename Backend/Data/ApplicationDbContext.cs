@@ -1,4 +1,3 @@
-
 using Backend.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +18,7 @@ public class ApplicationDbContext
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -116,5 +116,22 @@ public class ApplicationDbContext
                 m.SenderId,
                 m.SentAtUtc
             });
+
+        // Payment relationship with Booking
+        builder.Entity<Payment>()
+            .HasOne(p => p.Booking)
+            .WithMany()
+            .HasForeignKey(p => p.BookingId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Each Stripe Checkout Session ID must be unique.
+        // PostgreSQL permits multiple null values in this unique index.
+        builder.Entity<Payment>()
+            .HasIndex(p => p.StripeCheckoutSessionId)
+            .IsUnique();
+
+        // Index payments by booking
+        builder.Entity<Payment>()
+            .HasIndex(p => p.BookingId);
     }
 }

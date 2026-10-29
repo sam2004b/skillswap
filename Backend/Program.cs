@@ -58,6 +58,7 @@ builder.Services
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+// JWT configuration
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException(
         "JWT key is missing from configuration.");
@@ -107,6 +108,7 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// Application services
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
@@ -115,9 +117,22 @@ builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 var app = builder.Build();
 
+// Stripe configuration
+var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
+
+if (string.IsNullOrWhiteSpace(stripeSecretKey))
+{
+    throw new InvalidOperationException(
+        "Stripe:SecretKey is missing. Configure it using .NET User Secrets.");
+}
+
+Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+
+// Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
