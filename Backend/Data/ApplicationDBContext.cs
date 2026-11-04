@@ -13,4 +13,5 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<Skill> Skills { get; set; }
+    public DbSet<Availability> Availabilities => Set<Availability>();
 }
