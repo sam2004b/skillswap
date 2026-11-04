@@ -17,6 +17,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Availability> Availabilities => Set<Availability>();
 
     public DbSet<Booking> Bookings => Set<Booking>();
+    
+    public DbSet<Message> Messages => Set<Message>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
