@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext : IdentityDbContext<AuthenticationUser>
 {
     public ApplicationDbContext(
         DbContextOptions<ApplicationDbContext> options)
@@ -22,9 +22,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Review> Reviews => Set<Review>();
 
+    public DbSet<Payment> Payments => Set<Payment>();
+
+    public DbSet<StripeWebhookEvent> StripeWebhookEvents =>
+        Set<StripeWebhookEvent>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<Availability>()
+            .HasOne(a => a.User)
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<Booking>()
             .HasOne(b => b.Skill)
@@ -111,5 +122,52 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Review>()
             .HasIndex(r => r.TeacherId);
+
+        builder.Entity<Payment>()
+            .HasOne(p => p.Booking)
+            .WithMany()
+            .HasForeignKey(p => p.BookingId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Payment>()
+            .HasOne(p => p.Student)
+            .WithMany()
+            .HasForeignKey(p => p.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Payment>()
+            .HasOne(p => p.Teacher)
+            .WithMany()
+            .HasForeignKey(p => p.TeacherId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Payment>()
+            .HasIndex(p => p.BookingId)
+            .IsUnique();
+
+        builder.Entity<Payment>()
+            .HasIndex(p => p.StudentId);
+
+        builder.Entity<Payment>()
+            .HasIndex(p => p.TeacherId);
+
+        builder.Entity<Payment>()
+            .HasIndex(p => p.StripeCheckoutSessionId)
+            .IsUnique()
+            .HasFilter("\"StripeCheckoutSessionId\" IS NOT NULL");
+
+        builder.Entity<Payment>()
+            .HasIndex(p => p.StripePaymentIntentId)
+            .IsUnique()
+            .HasFilter("\"StripePaymentIntentId\" IS NOT NULL");
+
+        builder.Entity<StripeWebhookEvent>()
+            .HasIndex(e => e.StripeEventId)
+            .IsUnique();
+
+        builder.Entity<AuthenticationUser>()
+            .HasIndex(u => u.StripeAccountId)
+            .IsUnique()
+            .HasFilter("\"StripeAccountId\" IS NOT NULL");
     }
 }

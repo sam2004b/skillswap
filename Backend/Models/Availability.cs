@@ -10,7 +10,7 @@ public class Availability
     [Required]
     public string UserId { get; set; } = string.Empty;
 
-    public ApplicationUser? User { get; set; }
+    public AuthenticationUser? User { get; set; }
 
     [Required]
     public DateTime StartAtUtc { get; set; }

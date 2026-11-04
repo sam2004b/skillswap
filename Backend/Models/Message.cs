@@ -9,12 +9,12 @@ public class Message
     [Required]
     public string SenderId { get; set; } = string.Empty;
 
-    public ApplicationUser? Sender { get; set; }
+    public AuthenticationUser? Sender { get; set; }
 
     [Required]
     public string ReceiverId { get; set; } = string.Empty;
 
-    public ApplicationUser? Receiver { get; set; }
+    public AuthenticationUser? Receiver { get; set; }
 
     [Required]
     [MaxLength(5000)]

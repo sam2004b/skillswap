@@ -33,7 +33,7 @@ public class Skill
 
     public string UserId { get; set; } = string.Empty;
 
-    public ApplicationUser? User { get; set; }
+    public AuthenticationUser? User { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

@@ -14,12 +14,12 @@ public class Review
     [Required]
     public string ReviewerId { get; set; } = string.Empty;
 
-    public ApplicationUser? Reviewer { get; set; }
+    public AuthenticationUser? Reviewer { get; set; }
 
     [Required]
     public string TeacherId { get; set; } = string.Empty;
 
-    public ApplicationUser? Teacher { get; set; }
+    public AuthenticationUser? Teacher { get; set; }
 
     [Range(1, 5)]
     public int Rating { get; set; }

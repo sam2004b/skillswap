@@ -15,12 +15,12 @@ public class Booking
     [Required]
     public string StudentId { get; set; } = string.Empty;
 
-    public ApplicationUser? Student { get; set; }
+    public AuthenticationUser? Student { get; set; }
 
     [Required]
     public string TeacherId { get; set; } = string.Empty;
 
-    public ApplicationUser? Teacher { get; set; }
+    public AuthenticationUser? Teacher { get; set; }
 
     [Required]
     public DateTime StartAtUtc { get; set; }

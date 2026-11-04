@@ -16,7 +16,7 @@ public class JwtService
     }
 
     public (string Token, DateTime ExpiresAtUtc) GenerateToken(
-        ApplicationUser user,
+        AuthenticationUser user,
         IList<string> roles)
     {
         var key = _configuration["Jwt:Key"]

@@ -6,12 +6,12 @@ namespace Backend.Services;
 
 public class AuthService : IAuthService
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserManager<AuthenticationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly JwtService _jwtService;
 
     public AuthService(
-        UserManager<ApplicationUser> userManager,
+        UserManager<AuthenticationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         JwtService jwtService)
     {
@@ -33,7 +33,7 @@ public class AuthService : IAuthService
         if (existingUser != null)
             throw new ArgumentException("Email is already registered.");
 
-        var user = new ApplicationUser
+        var user = new AuthenticationUser
         {
             UserName = request.Email,
             Email = request.Email,
@@ -99,8 +99,6 @@ public class AuthService : IAuthService
 
     public async Task LogoutAsync(string userId)
     {
-        // JWT authentication is stateless.
-        // Client must delete its stored token to log out.
         await Task.CompletedTask;
     }
 
@@ -143,7 +141,7 @@ public class AuthService : IAuthService
     }
 
     private AuthResponse CreateAuthResponse(
-        ApplicationUser user,
+        AuthenticationUser user,
         IList<string> roles)
     {
         var (token, expiresAt) = _jwtService.GenerateToken(user, roles);
