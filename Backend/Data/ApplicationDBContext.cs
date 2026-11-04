@@ -11,4 +11,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         : base(options)
     {
     }
+
+    public DbSet<Skill> Skills { get; set; }
 }
