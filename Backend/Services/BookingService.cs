@@ -8,10 +8,12 @@ namespace Backend.Services;
 public class BookingService : IBookingService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IUserNotificationService _notifications;
 
-    public BookingService(ApplicationDbContext context)
+    public BookingService(ApplicationDbContext context, IUserNotificationService notifications)
     {
         _context = context;
+        _notifications = notifications;
     }
 
     public async Task<BookingResponse> CreateBookingAsync(
@@ -96,6 +98,7 @@ public class BookingService : IBookingService
         _context.Bookings.Add(booking);
 
         await _context.SaveChangesAsync();
+        await _notifications.NotifyAsync(booking.TeacherId, "BookingCreated", "New booking", "A learner booked one of your lessons.", "Booking", booking.Id.ToString());
 
         return await GetResponseAsync(booking.Id);
     }
@@ -261,6 +264,8 @@ public class BookingService : IBookingService
         booking.UpdatedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+        var otherUserId = booking.StudentId == userId ? booking.TeacherId : booking.StudentId;
+        await _notifications.NotifyAsync(otherUserId, "BookingCancelled", "Booking cancelled", "A booking you are part of was cancelled.", "Booking", booking.Id.ToString());
 
         return await GetResponseAsync(booking.Id);
     }
@@ -302,6 +307,7 @@ public class BookingService : IBookingService
         booking.UpdatedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+        await _notifications.NotifyAsync(booking.StudentId, "BookingCompleted", "Lesson completed", "Your teacher marked the lesson as completed.", "Booking", booking.Id.ToString());
 
         return await GetResponseAsync(booking.Id);
     }

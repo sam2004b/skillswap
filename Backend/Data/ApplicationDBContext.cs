@@ -37,6 +37,8 @@ public class ApplicationDbContext : IdentityDbContext<AuthenticationUser>
 
     public DbSet<SkillSwapRequest> SkillSwapRequests => Set<SkillSwapRequest>();
 
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -227,5 +229,10 @@ public class ApplicationDbContext : IdentityDbContext<AuthenticationUser>
         builder.Entity<SkillSwapRequest>()
             .HasOne(s => s.RequestedSkill).WithMany().HasForeignKey(s => s.RequestedSkillId).OnDelete(DeleteBehavior.Restrict);
         builder.Entity<SkillSwapRequest>().HasIndex(s => new { s.RecipientId, s.Status });
+
+        builder.Entity<UserNotification>()
+            .HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<UserNotification>().HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAtUtc });
     }
 }

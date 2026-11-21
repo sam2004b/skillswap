@@ -9,7 +9,8 @@ namespace Backend.Services;
 public class ExchangeService : IExchangeService
 {
     private readonly ApplicationDbContext _db;
-    public ExchangeService(ApplicationDbContext db) => _db = db;
+    private readonly IUserNotificationService _notifications;
+    public ExchangeService(ApplicationDbContext db, IUserNotificationService notifications) { _db = db; _notifications = notifications; }
 
     public async Task<CreditWalletResponse> GetWalletAsync(string userId, CancellationToken ct = default)
     {
@@ -43,6 +44,7 @@ public class ExchangeService : IExchangeService
         _db.CreditTransactions.Add(new CreditTransaction { UserId=userId, Wallet=learnerWallet, Type="LessonEscrow", Amount=-creditCost, BalanceAfter=learnerWallet.Balance, BookingId=booking.Id, Description="Credits reserved for lesson" });
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await _notifications.NotifyAsync(booking.TeacherId, "CreditBookingCreated", "New credit lesson", "A learner booked your skill using credits.", "Booking", booking.Id.ToString(), ct);
         return new { booking.Id, booking.SkillId, booking.StudentId, booking.TeacherId, booking.StartAtUtc, booking.EndAtUtc, booking.PaymentMethod, booking.CreditCost, booking.Status };
     }
 
@@ -86,7 +88,7 @@ public class ExchangeService : IExchangeService
         if (offered.UserId != userId) throw new UnauthorizedAccessException("You must own the skill you offer.");
         if (requested.UserId == userId) throw new InvalidOperationException("You cannot swap with yourself.");
         var swap = new SkillSwapRequest { ProposerId=userId, RecipientId=requested.UserId, OfferedSkillId=offered.Id, RequestedSkillId=requested.Id, Message=request.Message?.Trim(), Status="Pending" };
-        _db.SkillSwapRequests.Add(swap); await _db.SaveChangesAsync(ct); return await GetSwapAsync(swap.Id, ct);
+        _db.SkillSwapRequests.Add(swap); await _db.SaveChangesAsync(ct); await _notifications.NotifyAsync(swap.RecipientId, "SkillSwapRequested", "New skill-swap request", "Someone proposed exchanging skills with you.", "SkillSwap", swap.Id.ToString(), ct); return await GetSwapAsync(swap.Id, ct);
     }
 
     public async Task<SkillSwapResponse> RespondToSkillSwapAsync(string userId, int id, bool accept, CancellationToken ct = default)
@@ -94,7 +96,7 @@ public class ExchangeService : IExchangeService
         var swap = await _db.SkillSwapRequests.FirstOrDefaultAsync(s => s.Id == id, ct) ?? throw new KeyNotFoundException("Skill swap request not found.");
         if (swap.RecipientId != userId) throw new UnauthorizedAccessException("Only the requested user can respond.");
         if (swap.Status != "Pending") throw new InvalidOperationException("This request has already been answered.");
-        swap.Status=accept ? "Accepted" : "Rejected"; swap.RespondedAtUtc=DateTime.UtcNow; await _db.SaveChangesAsync(ct); return await GetSwapAsync(id, ct);
+        swap.Status=accept ? "Accepted" : "Rejected"; swap.RespondedAtUtc=DateTime.UtcNow; await _db.SaveChangesAsync(ct); await _notifications.NotifyAsync(swap.ProposerId, accept ? "SkillSwapAccepted" : "SkillSwapRejected", accept ? "Skill swap accepted" : "Skill swap declined", accept ? "Your skill-swap request was accepted." : "Your skill-swap request was declined.", "SkillSwap", swap.Id.ToString(), ct); return await GetSwapAsync(id, ct);
     }
 
     public async Task<SkillSwapResponse> CompleteSkillSwapAsync(string userId, int id, CancellationToken ct = default)
@@ -110,6 +112,8 @@ public class ExchangeService : IExchangeService
             swap.CompletedAtUtc = DateTime.UtcNow;
         }
         await _db.SaveChangesAsync(ct);
+        var otherUserId = swap.ProposerId == userId ? swap.RecipientId : swap.ProposerId;
+        await _notifications.NotifyAsync(otherUserId, "SkillSwapProgress", "Skill-swap updated", swap.Status == "Completed" ? "Both users confirmed completion of the skill swap." : "The other participant confirmed their part of the skill swap.", "SkillSwap", swap.Id.ToString(), ct);
         return await GetSwapAsync(id, ct);
     }
 

@@ -1,6 +1,7 @@
 using System.Text;
 using Backend.Data;
 using Backend.Models;
+using Backend.Hubs;
 using Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -61,6 +62,23 @@ builder.Services
                 Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };
+
+        // Browser SignalR clients send the JWT as the access_token query value
+        // when the transport is WebSockets or Server-Sent Events.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var requestPath = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    requestPath.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -86,6 +104,8 @@ builder.Services.AddScoped<IReviewService, Backend.Services.ReviewService>();
 builder.Services.AddScoped<ITaxService, Backend.Services.TaxService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IExchangeService, ExchangeService>();
+builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 
@@ -142,5 +162,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 app.Run();
