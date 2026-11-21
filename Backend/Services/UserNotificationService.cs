@@ -1,3 +1,4 @@
+
 using Backend.Data;
 using Backend.DTOs;
 using Backend.Hubs;
@@ -9,26 +10,116 @@ namespace Backend.Services;
 
 public class UserNotificationService : IUserNotificationService
 {
+    private const int MaximumNotifications = 100;
+    private const string NotificationEvent = "NotificationReceived";
+
     private readonly ApplicationDbContext _db;
     private readonly IHubContext<NotificationsHub> _hub;
-    public UserNotificationService(ApplicationDbContext db, IHubContext<NotificationsHub> hub) { _db = db; _hub = hub; }
 
-    public async Task NotifyAsync(string userId, string type, string title, string message, string? entityType = null, string? entityId = null, CancellationToken ct = default)
+    public UserNotificationService(
+        ApplicationDbContext db,
+        IHubContext<NotificationsHub> hub)
     {
-        var item = new UserNotification { UserId=userId, Type=type, Title=title, Message=message, RelatedEntityType=entityType, RelatedEntityId=entityId };
-        _db.UserNotifications.Add(item);
-        await _db.SaveChangesAsync(ct);
-        var response = new UserNotificationResponse { Id=item.Id, Type=item.Type, Title=item.Title, Message=item.Message, RelatedEntityType=item.RelatedEntityType, RelatedEntityId=item.RelatedEntityId, IsRead=item.IsRead, CreatedAtUtc=item.CreatedAtUtc };
-        await _hub.Clients.Group(NotificationsHub.UserGroup(userId)).SendAsync("NotificationReceived", response, ct);
+        _db = db;
+        _hub = hub;
     }
 
-    public Task<List<UserNotificationResponse>> GetMineAsync(string userId, CancellationToken ct = default) => _db.UserNotifications.AsNoTracking().Where(n => n.UserId == userId).OrderByDescending(n => n.CreatedAtUtc).Take(100).Select(n => new UserNotificationResponse { Id=n.Id, Type=n.Type, Title=n.Title, Message=n.Message, RelatedEntityType=n.RelatedEntityType, RelatedEntityId=n.RelatedEntityId, IsRead=n.IsRead, CreatedAtUtc=n.CreatedAtUtc }).ToListAsync(ct);
-
-    public async Task<bool> MarkReadAsync(string userId, long notificationId, CancellationToken ct = default)
+    public async Task NotifyAsync(
+        string userId,
+        string type,
+        string title,
+        string message,
+        string? entityType = null,
+        string? entityId = null,
+        CancellationToken ct = default)
     {
-        var item = await _db.UserNotifications.FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId, ct);
-        if (item == null) return false;
-        if (!item.IsRead) { item.IsRead=true; item.ReadAtUtc=DateTime.UtcNow; await _db.SaveChangesAsync(ct); }
+        var notification = new UserNotification
+        {
+            UserId = userId,
+            Type = type,
+            Title = title,
+            Message = message,
+            RelatedEntityType = entityType,
+            RelatedEntityId = entityId
+        };
+
+        _db.UserNotifications.Add(notification);
+
+        await _db.SaveChangesAsync(ct);
+
+        var response = MapToResponse(notification);
+
+        // Deliver the notification to the user's connected clients.
+        await _hub.Clients
+            .Group(NotificationsHub.UserGroup(userId))
+            .SendAsync(NotificationEvent, response, ct);
+    }
+
+    public async Task<List<UserNotificationResponse>> GetMineAsync(
+        string userId,
+        CancellationToken ct = default)
+    {
+        return await _db.UserNotifications
+            .AsNoTracking()
+            .Where(notification => notification.UserId == userId)
+            .OrderByDescending(notification => notification.CreatedAtUtc)
+            .Take(MaximumNotifications)
+            .Select(notification => new UserNotificationResponse
+            {
+                Id = notification.Id,
+                Type = notification.Type,
+                Title = notification.Title,
+                Message = notification.Message,
+                RelatedEntityType = notification.RelatedEntityType,
+                RelatedEntityId = notification.RelatedEntityId,
+                IsRead = notification.IsRead,
+                CreatedAtUtc = notification.CreatedAtUtc
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<bool> MarkReadAsync(
+        string userId,
+        long notificationId,
+        CancellationToken ct = default)
+    {
+        var notification = await _db.UserNotifications
+            .FirstOrDefaultAsync(
+                item => item.Id == notificationId &&
+                        item.UserId == userId,
+                ct);
+
+        if (notification == null)
+        {
+            return false;
+        }
+
+        if (notification.IsRead)
+        {
+            return true;
+        }
+
+        notification.IsRead = true;
+        notification.ReadAtUtc = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
         return true;
+    }
+
+    private static UserNotificationResponse MapToResponse(
+        UserNotification notification)
+    {
+        return new UserNotificationResponse
+        {
+            Id = notification.Id,
+            Type = notification.Type,
+            Title = notification.Title,
+            Message = notification.Message,
+            RelatedEntityType = notification.RelatedEntityType,
+            RelatedEntityId = notification.RelatedEntityId,
+            IsRead = notification.IsRead,
+            CreatedAtUtc = notification.CreatedAtUtc
+        };
     }
 }
