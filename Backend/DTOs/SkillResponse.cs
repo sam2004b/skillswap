@@ -16,6 +16,8 @@ public class SkillResponse
 
     public string Currency { get; set; } = "USD";
 
+    public decimal CreditRate { get; set; }
+
     public string UserId { get; set; } = string.Empty;
 
     public string TeacherName { get; set; } = string.Empty;

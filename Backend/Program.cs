@@ -83,7 +83,9 @@ builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IReviewService, Backend.Services.ReviewService>();
+builder.Services.AddScoped<ITaxService, Backend.Services.TaxService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IExchangeService, ExchangeService>();
 
 builder.Services.AddControllers();
 

@@ -1,4 +1,5 @@
 using Backend.DTOs;
+using Backend.Data;
 using Backend.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -9,15 +10,18 @@ public class AuthService : IAuthService
     private readonly UserManager<AuthenticationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly JwtService _jwtService;
+    private readonly ApplicationDbContext _db;
 
     public AuthService(
         UserManager<AuthenticationUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        JwtService jwtService)
+        JwtService jwtService,
+        ApplicationDbContext db)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _jwtService = jwtService;
+        _db = db;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -73,6 +77,20 @@ public class AuthService : IAuthService
             await _userManager.DeleteAsync(user);
             throw new InvalidOperationException("Unable to assign role.");
         }
+
+        var wallet = new CreditWallet { UserId = user.Id, Balance = 20m };
+        _db.CreditWallets.Add(wallet);
+        await _db.SaveChangesAsync();
+        _db.CreditTransactions.Add(new CreditTransaction
+        {
+            UserId = user.Id,
+            Wallet = wallet,
+            Type = "WelcomeBonus",
+            Amount = 20m,
+            BalanceAfter = 20m,
+            Description = "Initial SkillSwap promotional credits"
+        });
+        await _db.SaveChangesAsync();
 
         var roles = await _userManager.GetRolesAsync(user);
 

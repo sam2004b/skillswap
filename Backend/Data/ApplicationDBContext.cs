@@ -27,6 +27,16 @@ public class ApplicationDbContext : IdentityDbContext<AuthenticationUser>
     public DbSet<StripeWebhookEvent> StripeWebhookEvents =>
         Set<StripeWebhookEvent>();
 
+    public DbSet<TaxProfile> TaxProfiles => Set<TaxProfile>();
+
+    public DbSet<TaxRecord> TaxRecords => Set<TaxRecord>();
+
+    public DbSet<CreditWallet> CreditWallets => Set<CreditWallet>();
+
+    public DbSet<CreditTransaction> CreditTransactions => Set<CreditTransaction>();
+
+    public DbSet<SkillSwapRequest> SkillSwapRequests => Set<SkillSwapRequest>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -36,6 +46,12 @@ public class ApplicationDbContext : IdentityDbContext<AuthenticationUser>
             .WithMany()
             .HasForeignKey(a => a.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Booking>()
+            .Property(b => b.PaymentMethod).HasDefaultValue("Money");
+
+        builder.Entity<Skill>()
+            .Property(s => s.CreditRate).HasDefaultValue(10m);
 
         builder.Entity<Booking>()
             .HasOne(b => b.Skill)
@@ -169,5 +185,47 @@ public class ApplicationDbContext : IdentityDbContext<AuthenticationUser>
             .HasIndex(u => u.StripeAccountId)
             .IsUnique()
             .HasFilter("\"StripeAccountId\" IS NOT NULL");
+
+        builder.Entity<TaxProfile>()
+            .HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<TaxProfile>()
+            .HasIndex(p => p.UserId)
+            .IsUnique();
+
+        builder.Entity<TaxRecord>()
+            .HasOne(t => t.Payment)
+            .WithOne()
+            .HasForeignKey<TaxRecord>(t => t.PaymentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<TaxRecord>()
+            .HasIndex(t => t.PaymentId)
+            .IsUnique();
+
+        builder.Entity<CreditWallet>()
+            .HasOne(w => w.User).WithMany()
+            .HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<CreditWallet>().HasIndex(w => w.UserId).IsUnique();
+
+        builder.Entity<CreditTransaction>()
+            .HasOne(t => t.Wallet).WithMany()
+            .HasForeignKey(t => t.UserId).HasPrincipalKey(w => w.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<CreditTransaction>().HasIndex(t => t.Reference).IsUnique();
+        builder.Entity<CreditTransaction>().HasIndex(t => new { t.UserId, t.CreatedAtUtc });
+
+        builder.Entity<SkillSwapRequest>()
+            .HasOne(s => s.Proposer).WithMany().HasForeignKey(s => s.ProposerId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<SkillSwapRequest>()
+            .HasOne(s => s.Recipient).WithMany().HasForeignKey(s => s.RecipientId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<SkillSwapRequest>()
+            .HasOne(s => s.OfferedSkill).WithMany().HasForeignKey(s => s.OfferedSkillId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<SkillSwapRequest>()
+            .HasOne(s => s.RequestedSkill).WithMany().HasForeignKey(s => s.RequestedSkillId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<SkillSwapRequest>().HasIndex(s => new { s.RecipientId, s.Status });
     }
 }

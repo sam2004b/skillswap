@@ -31,6 +31,7 @@ public class SkillService : ISkillService
             Category = request.Category.Trim(),
             Level = request.Level.Trim(),
             HourlyRate = request.HourlyRate,
+            CreditRate = request.CreditRate,
             Currency = request.Currency.Trim().ToUpperInvariant(),
             UserId = userId,
             CreatedAtUtc = DateTime.UtcNow
@@ -58,6 +59,7 @@ public class SkillService : ISkillService
                 Category = s.Category,
                 Level = s.Level,
                 HourlyRate = s.HourlyRate,
+                CreditRate = s.CreditRate,
                 Currency = s.Currency,
                 UserId = s.UserId,
                 TeacherName = s.User != null ? s.User.FullName : "",
@@ -79,6 +81,7 @@ public class SkillService : ISkillService
                 Category = s.Category,
                 Level = s.Level,
                 HourlyRate = s.HourlyRate,
+                CreditRate = s.CreditRate,
                 Currency = s.Currency,
                 UserId = s.UserId,
                 TeacherName = s.User != null ? s.User.FullName : "",
@@ -103,6 +106,7 @@ public class SkillService : ISkillService
         skill.Category = request.Category.Trim();
         skill.Level = request.Level.Trim();
         skill.HourlyRate = request.HourlyRate;
+        skill.CreditRate = request.CreditRate;
         skill.Currency = request.Currency.Trim().ToUpperInvariant();
         skill.UpdatedAtUtc = DateTime.UtcNow;
 

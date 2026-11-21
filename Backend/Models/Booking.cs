@@ -40,6 +40,13 @@ public class Booking
 
     [Required]
     [MaxLength(20)]
+    public string PaymentMethod { get; set; } = "Money";
+
+    [Column(TypeName = "numeric(18,2)")]
+    public decimal CreditCost { get; set; }
+
+    [Required]
+    [MaxLength(20)]
     public string Status { get; set; } = "Confirmed";
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;

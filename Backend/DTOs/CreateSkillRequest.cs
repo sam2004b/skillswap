@@ -24,6 +24,9 @@ public class CreateSkillRequest
     [Range(typeof(decimal), "0.01", "9999999999999999")]
     public decimal HourlyRate { get; set; }
 
+    [Range(typeof(decimal), "0.01", "9999999999999999")]
+    public decimal CreditRate { get; set; } = 10m;
+
     [Required]
     [RegularExpression("^[A-Z]{3}$")]
     public string Currency { get; set; } = "USD";

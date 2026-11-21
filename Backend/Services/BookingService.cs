@@ -88,6 +88,7 @@ public class BookingService : IBookingService
             TotalPrice = Math.Round(
                 skill.HourlyRate * durationHours, 2),
             Currency = skill.Currency,
+            PaymentMethod = "Money",
             Status = "Confirmed",
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -122,6 +123,8 @@ public class BookingService : IBookingService
                 HourlyRate = b.HourlyRate,
                 TotalPrice = b.TotalPrice,
                 Currency = b.Currency,
+                PaymentMethod = b.PaymentMethod,
+                CreditCost = b.CreditCost,
                 Status = b.Status,
                 CreatedAtUtc = b.CreatedAtUtc,
                 UpdatedAtUtc = b.UpdatedAtUtc
@@ -152,6 +155,8 @@ public class BookingService : IBookingService
                 HourlyRate = b.HourlyRate,
                 TotalPrice = b.TotalPrice,
                 Currency = b.Currency,
+                PaymentMethod = b.PaymentMethod,
+                CreditCost = b.CreditCost,
                 Status = b.Status,
                 CreatedAtUtc = b.CreatedAtUtc,
                 UpdatedAtUtc = b.UpdatedAtUtc
@@ -243,6 +248,9 @@ public class BookingService : IBookingService
                 "You cannot cancel this booking.");
         }
 
+        if (booking.PaymentMethod == "Credits")
+            throw new InvalidOperationException("Use the credit booking cancellation endpoint so reserved credits can be returned.");
+
         if (booking.Status != "Confirmed")
         {
             throw new InvalidOperationException(
@@ -274,6 +282,9 @@ public class BookingService : IBookingService
             throw new UnauthorizedAccessException(
                 "Only the teacher can complete this booking.");
         }
+
+        if (booking.PaymentMethod == "Credits")
+            throw new InvalidOperationException("Use the credit booking completion endpoint so reserved credits can be released to the teacher.");
 
         if (booking.Status != "Confirmed")
         {
@@ -374,6 +385,8 @@ public class BookingService : IBookingService
                 HourlyRate = b.HourlyRate,
                 TotalPrice = b.TotalPrice,
                 Currency = b.Currency,
+                PaymentMethod = b.PaymentMethod,
+                CreditCost = b.CreditCost,
                 Status = b.Status,
                 CreatedAtUtc = b.CreatedAtUtc,
                 UpdatedAtUtc = b.UpdatedAtUtc

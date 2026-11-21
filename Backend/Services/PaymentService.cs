@@ -13,15 +13,18 @@ public class PaymentService : IPaymentService
     private readonly ApplicationDbContext _db;
     private readonly StripeClient _stripe;
     private readonly IConfiguration _configuration;
+    private readonly ITaxService _taxService;
 
     public PaymentService(
         ApplicationDbContext db,
         StripeClient stripe,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ITaxService taxService)
     {
         _db = db;
         _stripe = stripe;
         _configuration = configuration;
+        _taxService = taxService;
     }
 
     private decimal FeePercentage =>
@@ -97,6 +100,9 @@ public class PaymentService : IPaymentService
             throw new UnauthorizedAccessException(
                 "You cannot pay for another student's booking.");
 
+        if (!string.Equals(booking.PaymentMethod, "Money", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Stripe checkout is only available for money bookings.");
+
         if (!string.Equals(
                 booking.Status,
                 "Confirmed",
@@ -124,7 +130,31 @@ public class PaymentService : IPaymentService
                 "Teacher Stripe account is not ready.");
         }
 
+        // Calculate tax on the server; never accept a client-supplied tax amount.
+        var taxCalculation = await _taxService.CalculateTaxAsync(
+            booking.Id,
+            studentId);
+
+        decimal amount = taxCalculation.ServiceAmount;
+        decimal tax = taxCalculation.TaxAmount;
+        decimal total = taxCalculation.TotalAmount;
+
+        if (amount <= 0 || tax < 0 || total <= 0 || total != amount + tax)
+        {
+            throw new InvalidOperationException(
+                "The tax calculation returned invalid payment amounts.");
+        }
+
         string currency = booking.Currency.ToLowerInvariant();
+
+        if (!string.Equals(
+                taxCalculation.Currency,
+                booking.Currency,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The tax calculation currency does not match the booking currency.");
+        }
 
         var payment = await _db.Payments
             .FirstOrDefaultAsync(p => p.BookingId == bookingId);
@@ -156,27 +186,34 @@ public class PaymentService : IPaymentService
             }
         }
 
-        decimal amount = booking.TotalPrice;
-        decimal tax = 0m;
-        decimal total = amount + tax;
-
         if (FeePercentage < 0 || FeePercentage >= 100)
             throw new InvalidOperationException(
                 "Platform fee percentage must be between 0 and 100.");
 
+        // Calculate the platform fee on the service amount, excluding tax.
         decimal platformFee = Math.Round(
-            total * FeePercentage / 100m,
+            amount * FeePercentage / 100m,
             2,
             MidpointRounding.AwayFromZero);
 
-        decimal teacherAmount = total - platformFee;
+        // Tax is retained by SkillSwap for remittance. The teacher receives
+        // the service amount less the platform fee.
+        decimal teacherAmount = amount - platformFee;
 
         long totalMinor = ToMinorUnits(total, currency);
         long feeMinor = ToMinorUnits(platformFee, currency);
+        long taxMinor = ToMinorUnits(tax, currency);
+        long applicationFeeMinor = checked(feeMinor + taxMinor);
 
-        if (totalMinor <= 0 || feeMinor >= totalMinor)
+        if (totalMinor <= 0 ||
+            feeMinor < 0 ||
+            taxMinor < 0 ||
+            applicationFeeMinor >= totalMinor ||
+            teacherAmount < 0)
+        {
             throw new InvalidOperationException(
-                "Invalid payment or platform fee.");
+                "Invalid payment, tax, or platform fee amounts.");
+        }
 
         if (payment == null)
         {
@@ -247,7 +284,8 @@ public class PaymentService : IPaymentService
             },
             PaymentIntentData = new SessionPaymentIntentDataOptions
             {
-                ApplicationFeeAmount = feeMinor,
+                // Includes the platform fee and tax retained by SkillSwap.
+                ApplicationFeeAmount = applicationFeeMinor,
                 TransferData = new SessionPaymentIntentDataTransferDataOptions
                 {
                     Destination = booking.Teacher.StripeAccountId
@@ -269,6 +307,28 @@ public class PaymentService : IPaymentService
             .CreateAsync(options);
 
         payment.StripeCheckoutSessionId = session.Id;
+        await _db.SaveChangesAsync();
+
+        // Store one tax record per payment; update it on checkout retries.
+        var taxRecord = await _db.TaxRecords
+            .FirstOrDefaultAsync(t => t.PaymentId == payment.Id);
+
+        if (taxRecord == null)
+        {
+            taxRecord = new TaxRecord { PaymentId = payment.Id };
+            _db.TaxRecords.Add(taxRecord);
+        }
+
+        taxRecord.CustomerCountry = taxCalculation.CustomerCountry;
+        taxRecord.TeacherCountry = taxCalculation.TeacherCountry;
+        taxRecord.TaxableAmount = amount;
+        taxRecord.TaxRate = taxCalculation.TaxRate;
+        taxRecord.TaxAmount = tax;
+        taxRecord.Currency = currency.ToUpperInvariant();
+        taxRecord.TaxJurisdiction = taxCalculation.TaxJurisdiction;
+        taxRecord.TaxStatus = taxCalculation.TaxStatus;
+        taxRecord.CalculatedAtUtc = DateTime.UtcNow;
+
         await _db.SaveChangesAsync();
 
         return session.Url;

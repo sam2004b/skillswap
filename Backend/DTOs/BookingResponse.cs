@@ -26,6 +26,10 @@ public class BookingResponse
 
     public string Currency { get; set; } = "USD";
 
+    public string PaymentMethod { get; set; } = "Money";
+
+    public decimal CreditCost { get; set; }
+
     public string Status { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAtUtc { get; set; }

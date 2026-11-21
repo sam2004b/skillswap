@@ -27,6 +27,10 @@ public class Skill
     [Range(typeof(decimal), "0.01", "9999999999999999")]
     public decimal HourlyRate { get; set; }
 
+    [Column(TypeName = "numeric(18,2)")]
+    [Range(typeof(decimal), "0.01", "9999999999999999")]
+    public decimal CreditRate { get; set; } = 10m;
+
     [Required]
     [MaxLength(3)]
     public string Currency { get; set; } = "USD";
